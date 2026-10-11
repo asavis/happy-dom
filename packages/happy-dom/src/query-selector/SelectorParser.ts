@@ -45,7 +45,7 @@ const SELECTOR_GROUP_REGEXP = /(\s*[\s,+>~]\s*)|([\[\]\(\)"'])/g;
  * Group 23: Pseudo element (e.g. "::after", "::-webkit-inner-spin-button").
  */
 const SELECTOR_REGEXP =
-	/(\*)|([a-zA-Z0-9\u00A0-\uFFFF-]+)|#(([a-zA-Z0-9\u00A0-\uFFFF_-]|\\.)+)|\.(([a-zA-Z0-9\u00A0-\uFFFF_-]|\\.)+)|\[(([a-zA-Z0-9-_]|\\.)+)\]|\[(([a-zA-Z0-9-_]|\\.)+)\s*([~|^$*]{0,1})\s*=\s*("([^"]*)"|'([^']*)')\s*(s|i){0,1}\]|\[(([a-zA-Z0-9-_]|\\.)+)\s*([~|^$*]{0,1})\s*=\s*(([a-zA-Z0-9\u00A0-\uFFFF_¤£-]|\\.)+)\]|:([a-zA-Z-]+)\s*\(.+\)|:([a-zA-Z-]+)|::([a-zA-Z-]+)/g;
+	/(\*)|([a-zA-Z0-9\u00A0-\uFFFF-]+)|#(([a-zA-Z0-9\u00A0-\uFFFF_-]|\\.)+)|\.(([a-zA-Z0-9\u00A0-\uFFFF_-]|\\.)+)|\[(([a-zA-Z0-9-_]|\\.)+)\]|\[(([a-zA-Z0-9-_]|\\.)+)\s*([~|^$*]{0,1})\s*=\s*("([^"\\]*(?:\\[\s\S][^"\\]*)*)"|'([^'\\]*(?:\\[\s\S][^'\\]*)*)')\s*(s|i){0,1}\]|\[(([a-zA-Z0-9-_]|\\.)+)\s*([~|^$*]{0,1})\s*=\s*(([a-zA-Z0-9\u00A0-\uFFFF_¤£-]|\\.)+)\]|:([a-zA-Z-]+)\s*\(.+\)|:([a-zA-Z-]+)|::([a-zA-Z-]+)/g;
 
 /**
  * Selector pseudo RegExp.
@@ -63,10 +63,10 @@ const ESCAPED_CHARACTER_REGEXP = /\\/g;
 /**
  * CSS Escape RegExp.
  *
- * Matches CSS escape sequences: hex escapes (e.g. \30 , \0041) and character escapes (e.g. \:, \\).
+ * Matches CSS escape sequences: hex escapes (e.g. \30 , \0041), escaped newlines and character escapes (e.g. \:, \\, \").
  * Hex escapes consist of 1-6 hex digits optionally followed by a single whitespace character.
  */
-const CSS_UNESCAPE_REGEXP = /\\([0-9a-fA-F]{1,6})\s?|\\(.)/g;
+const CSS_UNESCAPE_REGEXP = /\\([0-9a-fA-F]{1,6})\s?|\\(?:\r\n|[\n\r\f])|\\(.)/g;
 
 /**
  * Attribute Escape RegExp.
@@ -259,8 +259,8 @@ export default class SelectorParser {
 					}
 					lastIndex = regExp.lastIndex;
 				}
-			} else {
-				// Matches parentheses or brackets.
+			} else if (!SelectorParser.isEscaped(selector, match.index)) {
+				// Matches parentheses, brackets or apostrophes that are not escaped (e.g. "\"" inside a quoted attribute value).
 
 				switch (match[2]) {
 					case '(':
@@ -682,9 +682,11 @@ export default class SelectorParser {
 	/**
 	 * Unescapes CSS escape sequences in a string value.
 	 *
-	 * Handles hex escapes (e.g. "\30 " → "0", "\0041" → "A") and character escapes (e.g. "\:" → ":").
+	 * Handles hex escapes (e.g. "\30 " → "0", "\0041" → "A") and character escapes (e.g. "\:" → ":", "\"" → """).
+	 * Escaped newlines are removed, as they are line continuations in quoted strings.
 	 *
 	 * @see https://www.w3.org/TR/css-syntax-3/#consume-escaped-code-point
+	 * @see https://www.w3.org/TR/css-syntax-3/#consume-string-token
 	 * @param value Escaped CSS value.
 	 * @returns Unescaped value.
 	 */
@@ -693,7 +695,22 @@ export default class SelectorParser {
 			if (hex) {
 				return String.fromCodePoint(parseInt(hex, 16));
 			}
-			return char;
+			return char ?? '';
 		});
+	}
+
+	/**
+	 * Returns "true" if the character at the index is escaped, which is when it is preceded by an odd number of backslashes.
+	 *
+	 * @param value Value.
+	 * @param index Index of the character.
+	 * @returns "true" if escaped.
+	 */
+	private static isEscaped(value: string, index: number): boolean {
+		let backslashes = 0;
+		while (index > 0 && value[--index] === '\\') {
+			backslashes++;
+		}
+		return backslashes % 2 === 1;
 	}
 }

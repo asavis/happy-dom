@@ -342,6 +342,19 @@ describe('QuerySelector', () => {
 			expect(validSelectorElements[1] === element2).toBe(true);
 		});
 
+		it('Returns all elements with class name \'a"b\' and "a(b" when the quote and the parenthesis are escaped.', () => {
+			const container = document.createElement('div');
+			container.innerHTML = `<i class='a"b'></i><i class="a(b"></i>`;
+
+			const elements = container.querySelectorAll('.a\\"b');
+			expect(elements.length).toBe(1);
+			expect(elements[0] === container.children[0]).toBe(true);
+
+			const elements2 = container.querySelectorAll('.a\\(b');
+			expect(elements2.length).toBe(1);
+			expect(elements2[0] === container.children[1]).toBe(true);
+		});
+
 		it('Returns all elements with class name "class1 class2".', () => {
 			const container = document.createElement('div');
 			container.innerHTML = QuerySelectorHTML;
@@ -681,6 +694,107 @@ describe('QuerySelector', () => {
 
 			expect(elements.length).toBe(1);
 			expect(elements[0] === container.children[0]).toBe(true);
+		});
+
+		it('Returns elements when a double-quoted attribute value contains escaped double quotes.', () => {
+			const container = document.createElement('div');
+			container.innerHTML = `<i data-value='say "hi"'></i><i data-value='5" screen'></i>`;
+
+			const elements = container.querySelectorAll('[data-value="say \\"hi\\""]');
+
+			expect(elements.length).toBe(1);
+			expect(elements[0] === container.children[0]).toBe(true);
+
+			// An odd number of escaped quotes followed by a space
+			const elements2 = container.querySelectorAll('i[data-value="5\\" screen"]');
+
+			expect(elements2.length).toBe(1);
+			expect(elements2[0] === container.children[1]).toBe(true);
+		});
+
+		it('Returns elements when a single-quoted attribute value contains escaped single quotes.', () => {
+			const container = document.createElement('div');
+			container.innerHTML = `<i data-value="it's"></i><i data-value="its"></i>`;
+
+			const elements = container.querySelectorAll("[data-value='it\\'s']");
+
+			expect(elements.length).toBe(1);
+			expect(elements[0] === container.children[0]).toBe(true);
+		});
+
+		it('Returns elements when a quoted attribute value contains an escaped backslash.', () => {
+			const container = document.createElement('div');
+			container.innerHTML = '<i data-value="a\\b"></i><i data-value="a\\"></i>';
+
+			const elements = container.querySelectorAll('[data-value="a\\\\b"]');
+
+			expect(elements.length).toBe(1);
+			expect(elements[0] === container.children[0]).toBe(true);
+
+			// The escaped backslash is followed by the closing quote
+			const elements2 = container.querySelectorAll('[data-value="a\\\\"]');
+
+			expect(elements2.length).toBe(1);
+			expect(elements2[0] === container.children[1]).toBe(true);
+		});
+
+		it('Returns elements when a quoted attribute value contains a hex escape or an escaped newline.', () => {
+			const container = document.createElement('div');
+			container.innerHTML = `<i data-value='say "hi"'></i><i data-value="ab"></i>`;
+
+			// "\22 " is the hex escape for a double quote
+			const elements = container.querySelectorAll('[data-value="say \\22 hi\\22 "]');
+
+			expect(elements.length).toBe(1);
+			expect(elements[0] === container.children[0]).toBe(true);
+
+			// An escaped newline is removed from a quoted string
+			const elements2 = container.querySelectorAll('[data-value="a\\\nb"]');
+
+			expect(elements2.length).toBe(1);
+			expect(elements2[0] === container.children[1]).toBe(true);
+		});
+
+		it('Returns elements when using CSS.escape() output containing quotes inside a quoted attribute value.', () => {
+			const container = document.createElement('div');
+			container.innerHTML = `<i data-value='say "hi"'></i><i data-value="it's"></i>`;
+
+			const elements = container.querySelectorAll(
+				`[data-value="${window.CSS.escape('say "hi"')}"]`
+			);
+
+			expect(elements.length).toBe(1);
+			expect(elements[0] === container.children[0]).toBe(true);
+
+			const elements2 = container.querySelectorAll(`[data-value='${window.CSS.escape("it's")}']`);
+
+			expect(elements2.length).toBe(1);
+			expect(elements2[0] === container.children[1]).toBe(true);
+
+			const elements3 = container.querySelectorAll(`[data-value^="${window.CSS.escape('say "')}"]`);
+
+			expect(elements3.length).toBe(1);
+			expect(elements3[0] === container.children[0]).toBe(true);
+		});
+
+		it('Throws an error for invalid quoted attribute values, such as one whose closing quote is escaped.', () => {
+			const container = document.createElement('div');
+
+			expect(() => container.querySelectorAll('[data-value="abc\\"]')).toThrow(
+				new window.DOMException(
+					`Failed to execute 'querySelectorAll' on 'Element': '[data-value="abc\\"]' is not a valid selector.`
+				)
+			);
+			expect(() => container.querySelectorAll("[data-value='abc\\']")).toThrow(
+				new window.DOMException(
+					`Failed to execute 'querySelectorAll' on 'Element': '[data-value='abc\\']' is not a valid selector.`
+				)
+			);
+			expect(() => container.querySelectorAll('[data-value="say "hi""]')).toThrow(
+				new window.DOMException(
+					`Failed to execute 'querySelectorAll' on 'Element': '[data-value="say "hi""]' is not a valid selector.`
+				)
+			);
 		});
 
 		it('Returns all elements with an attribute value containing a specified word using "[class~="class2"]".', () => {
