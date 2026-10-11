@@ -1257,11 +1257,7 @@ export default class HTMLInputElement extends HTMLElement {
 			return;
 		}
 
-		this.#selectionStart = 0;
-		this.#selectionEnd = this.value.length;
-		this.#selectionDirection = HTMLInputElementSelectionDirectionEnum.none;
-
-		this.dispatchEvent(new Event('select', { bubbles: true, cancelable: false }));
+		this.setSelectionRange(0, this.value.length);
 	}
 
 	/**
@@ -1279,6 +1275,10 @@ export default class HTMLInputElement extends HTMLElement {
 			);
 		}
 
+		const oldSelectionStart = this.selectionStart;
+		const oldSelectionEnd = this.selectionEnd;
+		const oldSelectionDirection = this.#selectionDirection;
+
 		this.#selectionEnd = Math.min(end, this.value.length);
 		this.#selectionStart = Math.min(start, this.#selectionEnd);
 		this.#selectionDirection =
@@ -1286,7 +1286,18 @@ export default class HTMLInputElement extends HTMLElement {
 			direction === HTMLInputElementSelectionDirectionEnum.backward
 				? direction
 				: HTMLInputElementSelectionDirectionEnum.none;
-		this.dispatchEvent(new Event('select', { bubbles: true, cancelable: false }));
+
+		// The "select" event is queued as a task, and only if the selection changed.
+		// @see https://html.spec.whatwg.org/multipage/form-control-infrastructure.html#set-the-selection-range
+		if (
+			this.#selectionStart !== oldSelectionStart ||
+			this.#selectionEnd !== oldSelectionEnd ||
+			this.#selectionDirection !== oldSelectionDirection
+		) {
+			this[PropertySymbol.window].setTimeout(() =>
+				this.dispatchEvent(new Event('select', { bubbles: true, cancelable: false }))
+			);
+		}
 	}
 
 	/**
@@ -1332,7 +1343,11 @@ export default class HTMLInputElement extends HTMLElement {
 		let selectionStart = this.#selectionStart!;
 		let selectionEnd = this.#selectionEnd!;
 
-		this.value = val.slice(0, start) + replacement + val.slice(end);
+		// Unlike the value setter, this doesn't move the cursor to the end, so that the "select" event is only fired if the selection below differs from the one before.
+		this[PropertySymbol.value] = HTMLInputElementValueSanitizer.sanitize(
+			this,
+			val.slice(0, start) + replacement + val.slice(end)
+		);
 
 		const newEnd = start + this.value.length;
 

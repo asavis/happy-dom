@@ -29,7 +29,40 @@ describe('KeyboardEvent', () => {
 		it('Returns true when Alt key is pressed', () => {
 			const event = new KeyboardEvent('keydown', { altKey: true });
 			expect(event.getModifierState('Alt')).toBe(true);
+		});
+
+		it('Returns false for "AltGraph" when only Alt key is pressed', () => {
+			const event = new KeyboardEvent('keydown', { altKey: true });
+			expect(event.getModifierState('AltGraph')).toBe(false);
+		});
+
+		it('Returns true for "AltGraph" when "modifierAltGraph" is set', () => {
+			const event = new KeyboardEvent('keydown', { modifierAltGraph: true });
 			expect(event.getModifierState('AltGraph')).toBe(true);
+			expect(event.getModifierState('Alt')).toBe(false);
+			expect(event.altKey).toBe(false);
+		});
+
+		it('Returns the state of modifiers set with "modifier" prefixed properties', () => {
+			const modifiers = [
+				'AltGraph',
+				'CapsLock',
+				'Fn',
+				'FnLock',
+				'Hyper',
+				'NumLock',
+				'ScrollLock',
+				'Super',
+				'Symbol',
+				'SymbolLock'
+			];
+			for (const modifier of modifiers) {
+				const event = new KeyboardEvent('keydown', { [`modifier${modifier}`]: true });
+				for (const other of modifiers) {
+					expect(event.getModifierState(other)).toBe(other === modifier);
+				}
+				expect(new KeyboardEvent('keydown').getModifierState(modifier)).toBe(false);
+			}
 		});
 
 		it('Returns true when Control key is pressed', () => {
@@ -55,17 +88,27 @@ describe('KeyboardEvent', () => {
 			expect(event.getModifierState('Shift')).toBe(false);
 		});
 
-		it('Is case-insensitive for modifier key names', () => {
+		it('Is case-sensitive for modifier key names', () => {
 			const event = new KeyboardEvent('keydown', {
 				altKey: true,
 				ctrlKey: true,
 				metaKey: true,
-				shiftKey: true
+				shiftKey: true,
+				modifierAltGraph: true,
+				modifierCapsLock: true
 			});
-			expect(event.getModifierState('alt')).toBe(true);
-			expect(event.getModifierState('CONTROL')).toBe(true);
+			expect(event.getModifierState('alt')).toBe(false);
+			expect(event.getModifierState('CONTROL')).toBe(false);
+			expect(event.getModifierState('meta')).toBe(false);
+			expect(event.getModifierState('ShIfT')).toBe(false);
+			expect(event.getModifierState('altgraph')).toBe(false);
+			expect(event.getModifierState('capslock')).toBe(false);
+			expect(event.getModifierState('Alt')).toBe(true);
+			expect(event.getModifierState('Control')).toBe(true);
 			expect(event.getModifierState('Meta')).toBe(true);
-			expect(event.getModifierState('ShIfT')).toBe(true);
+			expect(event.getModifierState('Shift')).toBe(true);
+			expect(event.getModifierState('AltGraph')).toBe(true);
+			expect(event.getModifierState('CapsLock')).toBe(true);
 		});
 
 		it('Returns false for invalid modifier keys', () => {

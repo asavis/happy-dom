@@ -2,6 +2,24 @@ import UIEvent from '../UIEvent.js';
 import type IKeyboardEventInit from './IKeyboardEventInit.js';
 
 /**
+ * Modifier keys set by the "modifier" prefixed properties of the event init (e.g. "modifierAltGraph").
+ *
+ * @see https://w3c.github.io/uievents/#dictdef-eventmodifierinit
+ */
+const INIT_MODIFIER_KEYS = [
+	'AltGraph',
+	'CapsLock',
+	'Fn',
+	'FnLock',
+	'Hyper',
+	'NumLock',
+	'ScrollLock',
+	'Super',
+	'Symbol',
+	'SymbolLock'
+];
+
+/**
  *
  */
 export default class KeyboardEvent extends UIEvent {
@@ -29,6 +47,8 @@ export default class KeyboardEvent extends UIEvent {
 	 */
 	public readonly which: number;
 
+	#modifierState: Set<string>;
+
 	/**
 	 * Constructor.
 	 *
@@ -49,12 +69,16 @@ export default class KeyboardEvent extends UIEvent {
 		this.shiftKey = eventInit?.shiftKey ?? false;
 		this.keyCode = eventInit?.keyCode ?? 0;
 		this.which = eventInit?.which ?? eventInit?.keyCode ?? 0;
+		this.#modifierState = new Set(
+			INIT_MODIFIER_KEYS.filter((key) => eventInit?.[<keyof IKeyboardEventInit>`modifier${key}`])
+		);
 	}
 
 	/**
 	 * Returns the state of a modifier key.
 	 *
-	 * @param key A modifier key value.
+	 * @see https://w3c.github.io/uievents/#dom-keyboardevent-getmodifierstate
+	 * @param key A modifier key value (case-sensitive, e.g. "Alt" or "AltGraph").
 	 * @returns True if it's pressed, false otherwise.
 	 */
 	public getModifierState(key: string): boolean {
@@ -63,18 +87,18 @@ export default class KeyboardEvent extends UIEvent {
 				"Failed to execute 'getModifierState' on 'KeyboardEvent': 1 argument required, but only 0 present."
 			);
 		}
-		switch (String(key).toLowerCase()) {
-			case 'alt':
-			case 'altgraph':
+		const modifier = String(key);
+		switch (modifier) {
+			case 'Alt':
 				return this.altKey;
-			case 'control':
+			case 'Control':
 				return this.ctrlKey;
-			case 'meta':
+			case 'Meta':
 				return this.metaKey;
-			case 'shift':
+			case 'Shift':
 				return this.shiftKey;
 			default:
-				return false;
+				return this.#modifierState.has(modifier);
 		}
 	}
 }

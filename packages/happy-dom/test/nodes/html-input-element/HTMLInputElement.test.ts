@@ -551,6 +551,16 @@ describe('HTMLInputElement', () => {
 			element.selectionStart = 5;
 			expect(element.selectionStart).toBe(5);
 		});
+
+		it('Dispatches a "select" event in a later task.', async () => {
+			let count = 0;
+			element.value = 'TEST_VALUE';
+			element.addEventListener('select', () => count++);
+			element.selectionStart = 5;
+			expect(count).toBe(0);
+			await window.happyDOM.waitUntilComplete();
+			expect(count).toBe(1);
+		});
 	});
 
 	describe('get selectionEnd()', () => {
@@ -1221,7 +1231,7 @@ describe('HTMLInputElement', () => {
 	});
 
 	describe('select()', () => {
-		it('Selects all text.', () => {
+		it('Selects all text.', async () => {
 			let triggeredEvent: Event | null = null;
 			element.addEventListener('select', (event) => (triggeredEvent = event));
 			element.value = 'TEST_VALUE';
@@ -1229,12 +1239,36 @@ describe('HTMLInputElement', () => {
 			expect(element.selectionStart).toBe(0);
 			expect(element.selectionEnd).toBe(10);
 			expect(element.selectionDirection).toBe('none');
+			expect(triggeredEvent).toBe(null);
+			await window.happyDOM.waitUntilComplete();
 			expect((<Event>(<unknown>triggeredEvent)).type).toBe('select');
+			expect((<Event>(<unknown>triggeredEvent)).bubbles).toBe(true);
+		});
+
+		it('Dispatches one "select" event in a later task.', async () => {
+			let count = 0;
+			element.value = 'TEST_VALUE';
+			element.addEventListener('select', () => count++);
+			element.select();
+			expect(count).toBe(0);
+			await window.happyDOM.waitUntilComplete();
+			expect(count).toBe(1);
+		});
+
+		it('Doesn\'t dispatch a "select" event if all text is already selected.', async () => {
+			let count = 0;
+			element.value = 'TEST_VALUE';
+			element.select();
+			await window.happyDOM.waitUntilComplete();
+			element.addEventListener('select', () => count++);
+			element.select();
+			await window.happyDOM.waitUntilComplete();
+			expect(count).toBe(0);
 		});
 	});
 
 	describe('setSelectionRange()', () => {
-		it('Sets selection range.', () => {
+		it('Sets selection range.', async () => {
 			let triggeredEvent: Event | null = null;
 			element.addEventListener('select', (event) => (triggeredEvent = event));
 			element.value = 'TEST_VALUE';
@@ -1242,7 +1276,54 @@ describe('HTMLInputElement', () => {
 			expect(element.selectionStart).toBe(1);
 			expect(element.selectionEnd).toBe(5);
 			expect(element.selectionDirection).toBe('forward');
+			expect(triggeredEvent).toBe(null);
+			await window.happyDOM.waitUntilComplete();
 			expect((<Event>(<unknown>triggeredEvent)).type).toBe('select');
+			expect((<Event>(<unknown>triggeredEvent)).bubbles).toBe(true);
+		});
+
+		it('Dispatches one "select" event in a later task.', async () => {
+			let count = 0;
+			element.value = 'TEST_VALUE';
+			element.addEventListener('select', () => count++);
+			element.setSelectionRange(1, 4);
+			expect(count).toBe(0);
+			await Promise.resolve();
+			expect(count).toBe(0);
+			await window.happyDOM.waitUntilComplete();
+			expect(count).toBe(1);
+		});
+
+		it('Dispatches a "select" event for every change of the selection.', async () => {
+			let count = 0;
+			element.value = 'TEST_VALUE';
+			element.addEventListener('select', () => count++);
+			element.setSelectionRange(1, 4);
+			element.setSelectionRange(2, 4);
+			element.setSelectionRange(2, 4, 'backward');
+			await window.happyDOM.waitUntilComplete();
+			expect(count).toBe(3);
+		});
+
+		it('Doesn\'t dispatch a "select" event if the selection didn\'t change.', async () => {
+			let count = 0;
+			element.value = 'TEST_VALUE';
+			element.setSelectionRange(1, 4, 'forward');
+			await window.happyDOM.waitUntilComplete();
+			element.addEventListener('select', () => count++);
+			element.setSelectionRange(1, 4, 'forward');
+			element.selectionStart = 1;
+			element.selectionEnd = 4;
+			element.selectionDirection = 'forward';
+			await window.happyDOM.waitUntilComplete();
+			expect(count).toBe(0);
+		});
+
+		it('Dispatches a "select" event from dispatchEvent() synchronously.', () => {
+			let count = 0;
+			element.addEventListener('select', () => count++);
+			element.dispatchEvent(new Event('select', { bubbles: true }));
+			expect(count).toBe(1);
 		});
 
 		it('Sets selection end to the value length if out of range.', () => {
@@ -1279,6 +1360,30 @@ describe('HTMLInputElement', () => {
 	});
 
 	describe('setRangeText()', () => {
+		it('Dispatches a "select" event in a later task if the selection changes.', async () => {
+			let count = 0;
+			element.value = 'TEST_VALUE';
+			element.addEventListener('select', () => count++);
+			element.setRangeText('_NEW_', 4, 5, HTMLInputElementSelectionModeEnum.start);
+			expect(count).toBe(0);
+			await window.happyDOM.waitUntilComplete();
+			expect(count).toBe(1);
+		});
+
+		it('Doesn\'t dispatch a "select" event if the selection is before the replaced text.', async () => {
+			let count = 0;
+			element.value = 'TEST_VALUE';
+			element.setSelectionRange(1, 2);
+			await window.happyDOM.waitUntilComplete();
+			element.addEventListener('select', () => count++);
+			element.setRangeText('_NEW_', 4, 5);
+			expect(element.selectionStart).toBe(1);
+			expect(element.selectionEnd).toBe(2);
+			expect(element.value).toBe('TEST_NEW_VALUE');
+			await window.happyDOM.waitUntilComplete();
+			expect(count).toBe(0);
+		});
+
 		it('Sets a range text with selection mode set to "preserve".', () => {
 			element.value = 'TEST_VALUE';
 			element.setRangeText('_NEW_', 4, 5);
