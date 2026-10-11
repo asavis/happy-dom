@@ -1,5 +1,6 @@
 import * as PropertySymbol from '../PropertySymbol.js';
 import Event from './Event.js';
+import MouseEvent from './events/MouseEvent.js';
 import type IEventListenerOptions from './IEventListenerOptions.js';
 import EventPhaseEnum from './EventPhaseEnum.js';
 import WindowBrowserContext from '../window/WindowBrowserContext.js';
@@ -27,6 +28,16 @@ export default class EventTarget {
 		capturing: Map<string, IEventListenerOptions[]>;
 		bubbling: Map<string, IEventListenerOptions[]>;
 	};
+
+	/**
+	 * Activation behavior.
+	 *
+	 * Implemented by event targets that have an activation behavior. It runs after a "click" event has been dispatched along the whole path, if the event wasn't canceled.
+	 *
+	 * @see https://dom.spec.whatwg.org/#eventtarget-activation-behavior
+	 * @param event Event.
+	 */
+	public [PropertySymbol.activationBehavior]?(event: Event): void;
 
 	/**
 	 * Constructor.
@@ -154,9 +165,17 @@ export default class EventTarget {
 			event[PropertySymbol.dispatching] = true;
 			event[PropertySymbol.target] = (<any>this)[PropertySymbol.proxy] || this;
 
-			this.#goThroughDispatchEventPhases(event);
+			const composedPath = event.composedPath();
+			const activationTarget = this.#getActivationTarget(event, composedPath);
+
+			this.#goThroughDispatchEventPhases(event, composedPath);
 
 			event[PropertySymbol.dispatching] = false;
+
+			// The activation behavior runs after the event has been dispatched along the whole path, and only if it wasn't canceled.
+			if (activationTarget && !event[PropertySymbol.defaultPrevented]) {
+				activationTarget[PropertySymbol.activationBehavior]!(event);
+			}
 
 			return !(event[PropertySymbol.cancelable] && event[PropertySymbol.defaultPrevented]);
 		}
@@ -205,13 +224,38 @@ export default class EventTarget {
 	}
 
 	/**
+	 * Returns the activation target of an event, which is the first event target in the path that has an activation behavior.
+	 *
+	 * Only the target can be the activation target of an event that doesn't bubble.
+	 *
+	 * @see https://dom.spec.whatwg.org/#concept-event-dispatch
+	 * @param event Event.
+	 * @param composedPath Composed path.
+	 * @returns Activation target.
+	 */
+	#getActivationTarget(event: Event, composedPath: EventTarget[]): EventTarget | null {
+		if (event[PropertySymbol.type] !== 'click' || !(event instanceof MouseEvent)) {
+			return null;
+		}
+
+		const max = event[PropertySymbol.bubbles] ? composedPath.length : 1;
+
+		for (let i = 0; i < max; i++) {
+			if (composedPath[i][PropertySymbol.activationBehavior]) {
+				return composedPath[i];
+			}
+		}
+
+		return null;
+	}
+
+	/**
 	 * Goes through dispatch event phases.
 	 *
 	 * @param event Event.
+	 * @param composedPath Composed path.
 	 */
-	#goThroughDispatchEventPhases(event: Event): void {
-		const composedPath = event.composedPath();
-
+	#goThroughDispatchEventPhases(event: Event, composedPath: EventTarget[]): void {
 		// Capturing phase
 		event[PropertySymbol.eventPhase] = EventPhaseEnum.capturing;
 

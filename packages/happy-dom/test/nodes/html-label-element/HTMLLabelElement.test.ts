@@ -2,7 +2,8 @@ import Window from '../../../src/window/Window.js';
 import type Document from '../../../src/nodes/document/Document.js';
 import type HTMLLabelElement from '../../../src/nodes/html-label-element/HTMLLabelElement.js';
 import type HTMLInputElement from '../../../src/nodes/html-input-element/HTMLInputElement.js';
-import { beforeEach, describe, it, expect } from 'vitest';
+import type Event from '../../../src/event/Event.js';
+import { beforeEach, describe, it, expect, vi } from 'vitest';
 import MouseEvent from '../../../src/event/events/MouseEvent.js';
 
 describe('HTMLLabelElement', () => {
@@ -208,6 +209,173 @@ describe('HTMLLabelElement', () => {
 
 			expect(changeFiredCount).toBe(1);
 			expect(div.querySelector('input')?.checked).toBe(true);
+		});
+
+		it("Doesn't dispatch a second click event on the control element when clicking on it inside of a label.", () => {
+			document.body.innerHTML = `
+                <label id="label"><span><input id="input" type="checkbox"></span> Choice</label>
+            `;
+			const label = <HTMLLabelElement>document.getElementById('label');
+			const input = <HTMLInputElement>document.getElementById('input');
+			let labelClickCount = 0;
+			let inputClickCount = 0;
+
+			label.addEventListener('click', () => labelClickCount++);
+			input.addEventListener('click', () => inputClickCount++);
+
+			input.click();
+
+			expect(input.checked).toBe(true);
+			expect(labelClickCount).toBe(1);
+			expect(inputClickCount).toBe(1);
+		});
+
+		it('Dispatches a click event on the control element when clicking on text inside of the label.', () => {
+			document.body.innerHTML = `
+                <label id="label"><input id="input" type="checkbox"> Choice <span id="span">Description</span></label>
+            `;
+			const label = <HTMLLabelElement>document.getElementById('label');
+			const input = <HTMLInputElement>document.getElementById('input');
+			let inputClickCount = 0;
+
+			input.addEventListener('click', () => inputClickCount++);
+
+			label.click();
+
+			expect(input.checked).toBe(true);
+			expect(inputClickCount).toBe(1);
+
+			document.getElementById('span')?.click();
+
+			expect(input.checked).toBe(false);
+			expect(inputClickCount).toBe(2);
+
+			label.childNodes[1].dispatchEvent(
+				new MouseEvent('click', { bubbles: true, cancelable: true })
+			);
+
+			expect(input.checked).toBe(true);
+			expect(inputClickCount).toBe(3);
+		});
+
+		it("Doesn't dispatch a click event on the control element when clicking on interactive content inside of the label.", () => {
+			document.body.innerHTML = `
+                <label>
+                    <input id="input" type="checkbox"> Choice
+                    <button id="button" type="button"><span id="buttonSpan">?</span></button>
+                    <a id="link" href="https://localhost/help">Help</a>
+                    <input id="text" type="text">
+                    <select id="select"><option>Option</option></select>
+                    <textarea id="textarea"></textarea>
+                </label>
+            `;
+			const input = <HTMLInputElement>document.getElementById('input');
+			const open = vi.spyOn(window, 'open').mockImplementation(() => null);
+			let inputClickCount = 0;
+
+			input.addEventListener('click', () => inputClickCount++);
+
+			for (const id of ['button', 'buttonSpan', 'link', 'text', 'select', 'textarea']) {
+				document.getElementById(id)?.click();
+			}
+
+			expect(open).toHaveBeenCalledTimes(1);
+			expect(input.checked).toBe(false);
+			expect(inputClickCount).toBe(0);
+		});
+
+		it("Doesn't dispatch a click event on the control element when a listener on an ancestor of the label calls preventDefault().", () => {
+			document.body.innerHTML = `
+                <div id="root"><label id="label"><input id="input" type="checkbox"> <span id="span">Choice</span></label></div>
+            `;
+			const root = document.getElementById('root')!;
+			const label = <HTMLLabelElement>document.getElementById('label');
+			const input = <HTMLInputElement>document.getElementById('input');
+			let inputClickCount = 0;
+
+			input.addEventListener('click', () => inputClickCount++);
+			root.addEventListener('click', (event) => {
+				if (event.target !== input) {
+					event.preventDefault();
+				}
+			});
+
+			label.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+			document.getElementById('span')?.click();
+
+			expect(input.checked).toBe(false);
+			expect(inputClickCount).toBe(0);
+		});
+
+		it("Doesn't dispatch a click event on the control element when preventDefault() has been called before the event is dispatched.", () => {
+			document.body.innerHTML = `
+                <label id="label"><input id="input" type="checkbox"> Choice</label>
+            `;
+			const label = <HTMLLabelElement>document.getElementById('label');
+			const input = <HTMLInputElement>document.getElementById('input');
+			const event = new MouseEvent('click', { bubbles: true, cancelable: true });
+			let inputClickCount = 0;
+
+			input.addEventListener('click', () => inputClickCount++);
+
+			// Testing libraries (e.g. @testing-library/user-event) cancel the event and replace "defaultPrevented" before dispatching it, to run their own activation behavior.
+			event.preventDefault();
+			Object.defineProperty(event, 'defaultPrevented', { get: () => false });
+
+			label.dispatchEvent(event);
+
+			expect(input.checked).toBe(false);
+			expect(inputClickCount).toBe(0);
+		});
+
+		it('Dispatches a click event on the control element once, after the click event has been dispatched to the ancestors of the label.', () => {
+			document.body.innerHTML = `
+                <div id="root"><label id="label"><input id="input" type="checkbox"> <span id="span">Choice</span></label></div>
+            `;
+			const root = document.getElementById('root')!;
+			const label = <HTMLLabelElement>document.getElementById('label');
+			const input = <HTMLInputElement>document.getElementById('input');
+			const log: string[] = [];
+			const listener = (event: Event): void => {
+				log.push(
+					`${(<HTMLElement>event.currentTarget).id || 'document'}: ${(<HTMLElement>event.target).id}`
+				);
+			};
+
+			for (const target of [document, root, label, input]) {
+				target.addEventListener('click', listener);
+			}
+
+			document.getElementById('span')?.click();
+
+			expect(input.checked).toBe(true);
+			expect(log).toEqual([
+				'label: span',
+				'root: span',
+				'document: span',
+				'input: input',
+				'label: input',
+				'root: input',
+				'document: input'
+			]);
+		});
+
+		it('Dispatches a click event on the control element when propagation is stopped before the click event reaches the label.', () => {
+			document.body.innerHTML = `
+                <label id="label"><input id="input" type="checkbox"> <span id="span">Choice</span></label>
+            `;
+			const input = <HTMLInputElement>document.getElementById('input');
+			let inputClickCount = 0;
+
+			input.addEventListener('click', () => inputClickCount++);
+			document
+				.getElementById('span')
+				?.addEventListener('click', (event) => event.stopPropagation());
+
+			document.getElementById('span')?.click();
+
+			expect(input.checked).toBe(true);
+			expect(inputClickCount).toBe(1);
 		});
 
 		describe('get labels()', () => {
