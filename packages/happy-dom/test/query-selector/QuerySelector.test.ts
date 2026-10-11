@@ -1381,6 +1381,9 @@ describe('QuerySelector', () => {
 			const span = <HTMLElement>document.querySelector('span.class1');
 			const div = <HTMLElement>document.querySelector('div.class1');
 
+			span.setAttribute('tabindex', '-1');
+			div.setAttribute('tabindex', '-1');
+
 			expect(document.querySelectorAll(':focus')[0]).toBe(document.body);
 			expect(document.querySelectorAll(':focus-visible')[0]).toBe(document.body);
 
@@ -2057,6 +2060,9 @@ describe('QuerySelector', () => {
 			const span = <HTMLElement>document.querySelector('span.class1');
 			const div = <HTMLElement>document.querySelector('div.class1');
 
+			span.setAttribute('tabindex', '-1');
+			div.setAttribute('tabindex', '-1');
+
 			expect(document.querySelector(':focus')).toBe(document.body);
 			expect(document.querySelector(':focus-visible')).toBe(document.body);
 
@@ -2298,6 +2304,9 @@ describe('QuerySelector', () => {
 			document.body.innerHTML = QuerySelectorHTML;
 			const span = <HTMLElement>document.querySelector('span.class1');
 			const div = <HTMLElement>document.querySelector('div.class1');
+
+			span.setAttribute('tabindex', '-1');
+			div.setAttribute('tabindex', '-1');
 
 			expect(span.matches(':focus')).toBe(false);
 			expect(span.matches(':focus-visible')).toBe(false);

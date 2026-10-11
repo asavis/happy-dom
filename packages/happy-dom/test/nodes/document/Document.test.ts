@@ -644,6 +644,9 @@ describe('Document', () => {
 			const div = document.createElement('div');
 			const span = document.createElement('span');
 
+			div.setAttribute('tabindex', '-1');
+			span.setAttribute('tabindex', '-1');
+
 			document.body.appendChild(div);
 			document.body.appendChild(span);
 
@@ -664,6 +667,8 @@ describe('Document', () => {
 
 		it('Unsets the active element when it gets disconnected.', () => {
 			const div = document.createElement('div');
+
+			div.setAttribute('tabindex', '-1');
 
 			document.body.appendChild(div);
 

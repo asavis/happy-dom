@@ -223,6 +223,9 @@ describe('ShadowRoot', () => {
 			const div = <HTMLElement>document.createElement('div');
 			const span = <HTMLElement>document.createElement('span');
 
+			div.setAttribute('tabindex', '-1');
+			span.setAttribute('tabindex', '-1');
+
 			document.body.appendChild(customElement);
 
 			shadowRoot.appendChild(div);
@@ -254,6 +257,8 @@ describe('ShadowRoot', () => {
 			const shadowRoot = <ShadowRoot>customElement.shadowRoot;
 			const div = <HTMLElement>document.createElement('div');
 
+			div.setAttribute('tabindex', '-1');
+
 			document.body.appendChild(customElement);
 
 			shadowRoot.appendChild(div);
@@ -275,6 +280,8 @@ describe('ShadowRoot', () => {
 			const div = <HTMLElement>document.createElement('div');
 			const customElementA = document.createElement('custom-element-a');
 			const shadowRootA = <ShadowRoot>customElementA.shadowRoot;
+
+			div.setAttribute('tabindex', '-1');
 
 			document.body.appendChild(customElement);
 
