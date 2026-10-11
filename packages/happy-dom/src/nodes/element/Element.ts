@@ -63,6 +63,10 @@ export default class Element
 	public declare [PropertySymbol.scrollWidth]: number;
 	public declare [PropertySymbol.scrollTop]: number;
 	public declare [PropertySymbol.scrollLeft]: number;
+	public declare [PropertySymbol.clientHeight]: number;
+	public declare [PropertySymbol.clientWidth]: number;
+	public declare [PropertySymbol.clientLeft]: number;
+	public declare [PropertySymbol.clientTop]: number;
 	public declare [PropertySymbol.attributes]: NamedNodeMap;
 	public declare [PropertySymbol.attributesProxy]: NamedNodeMap | null;
 	public declare [PropertySymbol.children]: HTMLCollection<Element> | null;
@@ -101,6 +105,10 @@ export default class Element
 		this[PropertySymbol.scrollWidth] = 0;
 		this[PropertySymbol.scrollTop] = 0;
 		this[PropertySymbol.scrollLeft] = 0;
+		this[PropertySymbol.clientHeight] = 0;
+		this[PropertySymbol.clientWidth] = 0;
+		this[PropertySymbol.clientLeft] = 0;
+		this[PropertySymbol.clientTop] = 0;
 		this[PropertySymbol.attributes] = new NamedNodeMap(this);
 		this[PropertySymbol.attributesProxy] = null;
 		this[PropertySymbol.children] = null;
@@ -259,6 +267,42 @@ export default class Element
 	 */
 	public set scrollLeft(value: number) {
 		this[PropertySymbol.scrollLeft] = value;
+	}
+
+	/**
+	 * Returns client height.
+	 *
+	 * @returns Client height.
+	 */
+	public get clientHeight(): number {
+		return this[PropertySymbol.clientHeight];
+	}
+
+	/**
+	 * Returns client width.
+	 *
+	 * @returns Client width.
+	 */
+	public get clientWidth(): number {
+		return this[PropertySymbol.clientWidth];
+	}
+
+	/**
+	 * Returns client left.
+	 *
+	 * @returns Client left.
+	 */
+	public get clientLeft(): number {
+		return this[PropertySymbol.clientLeft];
+	}
+
+	/**
+	 * Returns client top.
+	 *
+	 * @returns Client top.
+	 */
+	public get clientTop(): number {
+		return this[PropertySymbol.clientTop];
 	}
 
 	/**
@@ -1004,12 +1048,34 @@ export default class Element
 	/**
 	 * Returns a collection of DOMRect objects that indicate the bounding rectangles for each CSS border box in a client.
 	 *
+	 * The list is empty when the element has no box, which is when it is not connected or when it or an ancestor has "display: none".
+	 *
 	 * @see https://developer.mozilla.org/en-US/docs/Web/API/Element/getClientRects
+	 * @see https://drafts.csswg.org/cssom-view/#dom-element-getclientrects
 	 * @returns DOM rect list.
 	 */
 	public getClientRects(): DOMRectList {
 		// TODO: Not full implementation
 		const domRectList = new DOMRectList(PropertySymbol.illegalConstructor);
+
+		if (!this[PropertySymbol.isConnected]) {
+			return domRectList;
+		}
+
+		const window = this[PropertySymbol.window];
+		let node: Node | null = this;
+
+		// Walks up the ancestors, crossing from a shadow root to its host.
+		while (node) {
+			if (
+				node[PropertySymbol.nodeType] === NodeTypeEnum.elementNode &&
+				window.getComputedStyle(<Element>node).display === 'none'
+			) {
+				return domRectList;
+			}
+			node = node[PropertySymbol.parentNode] || (<ShadowRoot>node)[PropertySymbol.host] || null;
+		}
+
 		domRectList.push(this.getBoundingClientRect());
 		return domRectList;
 	}

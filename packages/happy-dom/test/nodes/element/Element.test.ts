@@ -1699,6 +1699,26 @@ describe('Element', () => {
 		});
 	});
 
+	for (const property of ['clientHeight', 'clientWidth', 'clientLeft', 'clientTop']) {
+		describe(`get ${property}()`, () => {
+			it('Is defined on Element.prototype and not on HTMLElement.prototype.', () => {
+				expect(Object.prototype.hasOwnProperty.call(window.Element.prototype, property)).toBe(true);
+				expect(Object.prototype.hasOwnProperty.call(window.HTMLElement.prototype, property)).toBe(
+					false
+				);
+			});
+
+			it('Returns "0" for an HTML element.', () => {
+				expect((<any>element)[property]).toBe(0);
+			});
+
+			it('Returns "0" for an SVG element.', () => {
+				const svg = document.createElementNS(NamespaceURI.svg, 'svg');
+				expect((<any>svg)[property]).toBe(0);
+			});
+		});
+	}
+
 	describe('attributeChangedCallback()', () => {
 		it('Calls attribute changed callback when it is implemented by a custom element (web component).', () => {
 			const customElement = <CustomElement>document.createElement('custom-element');
@@ -2309,6 +2329,68 @@ describe('Element', () => {
 		it('Returns an instance of DOMRect.', () => {
 			const domRect = element.getBoundingClientRect();
 			expect(domRect instanceof DOMRect).toBe(true);
+		});
+	});
+
+	describe('getClientRects()', () => {
+		it('Returns a list with one DOMRect for a rendered element.', () => {
+			document.body.appendChild(element);
+			const clientRects = element.getClientRects();
+			expect(clientRects.length).toBe(1);
+			expect(clientRects[0] instanceof DOMRect).toBe(true);
+		});
+
+		it('Returns an empty list for an element that is not connected.', () => {
+			expect(element.getClientRects().length).toBe(0);
+		});
+
+		it('Returns an empty list for an element with "display: none".', () => {
+			element.setAttribute('style', 'display: none');
+			document.body.appendChild(element);
+			expect(element.getClientRects().length).toBe(0);
+		});
+
+		it('Returns an empty list for an element with "display: none" set by a style sheet.', () => {
+			const style = document.createElement('style');
+			style.textContent = '.hidden { display: none; }';
+			document.head.appendChild(style);
+			element.classList.add('hidden');
+			document.body.appendChild(element);
+			expect(element.getClientRects().length).toBe(0);
+		});
+
+		it('Returns an empty list for an element with an ancestor that has "display: none".', () => {
+			const parent = document.createElement('div');
+			const child = document.createElement('span');
+			parent.setAttribute('style', 'display: none');
+			parent.appendChild(element);
+			element.appendChild(child);
+			document.body.appendChild(parent);
+			expect(element.getClientRects().length).toBe(0);
+			expect(child.getClientRects().length).toBe(0);
+		});
+
+		it('Returns an empty list for an element in the shadow root of a host that has "display: none".', () => {
+			const child = document.createElement('span');
+			element.attachShadow({ mode: 'open' }).appendChild(child);
+			document.body.appendChild(element);
+			expect(child.getClientRects().length).toBe(1);
+			element.setAttribute('style', 'display: none');
+			expect(child.getClientRects().length).toBe(0);
+		});
+
+		it('Returns a DOMRect again when the element is shown.', () => {
+			document.body.appendChild(element);
+			element.setAttribute('style', 'display: none');
+			expect(element.getClientRects().length).toBe(0);
+			element.removeAttribute('style');
+			expect(element.getClientRects().length).toBe(1);
+		});
+
+		it('Returns a list with one DOMRect for an SVG element.', () => {
+			const svg = document.createElementNS(NamespaceURI.svg, 'svg');
+			document.body.appendChild(svg);
+			expect(svg.getClientRects().length).toBe(1);
 		});
 	});
 

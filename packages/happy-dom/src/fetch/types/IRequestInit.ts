@@ -20,4 +20,5 @@ export default interface IRequestInit {
 	referrer?: '' | 'no-referrer' | 'client' | string | URL;
 	credentials?: TRequestCredentials;
 	referrerPolicy?: TRequestReferrerPolicy;
+	keepalive?: boolean;
 }

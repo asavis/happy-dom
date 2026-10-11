@@ -41,6 +41,9 @@ import { URLSearchParams } from 'url';
 import Stream from 'stream';
 import { ReadableStream } from 'stream/web';
 import SVGElementConfig from '../../src/config/SVGElementConfig.js';
+import DOMTokenList from '../../src/dom/DOMTokenList.js';
+import DOMStringMap from '../../src/dom/DOMStringMap.js';
+import DOMRectList from '../../src/dom/DOMRectList.js';
 
 const PLATFORM =
 	'X11; ' +
@@ -388,6 +391,40 @@ describe('BrowserWindow', () => {
 		it('Returns Request class.', () => {
 			const request = new window.Request('https://localhost:8080/test/page/');
 			expect(request instanceof Request).toBe(true);
+		});
+	});
+
+	describe('get DOMTokenList()', () => {
+		it('Returns the DOMTokenList class.', () => {
+			expect(window.DOMTokenList).toBe(DOMTokenList);
+			expect(document.createElement('div').classList).toBeInstanceOf(window.DOMTokenList);
+			expect(() => new (<any>window.DOMTokenList)()).toThrow(new TypeError('Illegal constructor'));
+		});
+
+		it('Makes it possible to spy on methods of DOMTokenList.prototype.', () => {
+			const spy = vi.spyOn(window.DOMTokenList.prototype, 'add');
+			const div = document.createElement('div');
+
+			div.classList.add('class1');
+
+			expect(spy).toHaveBeenCalledWith('class1');
+			expect(div.className).toBe('class1');
+		});
+	});
+
+	describe('get DOMStringMap()', () => {
+		it('Returns the DOMStringMap class.', () => {
+			expect(window.DOMStringMap).toBe(DOMStringMap);
+			expect(document.createElement('div').dataset).toBeInstanceOf(window.DOMStringMap);
+			expect(() => new (<any>window.DOMStringMap)()).toThrow(new TypeError('Illegal constructor'));
+		});
+	});
+
+	describe('get DOMRectList()', () => {
+		it('Returns the DOMRectList class.', () => {
+			expect(window.DOMRectList).toBe(DOMRectList);
+			expect(document.createElement('div').getClientRects()).toBeInstanceOf(window.DOMRectList);
+			expect(() => new (<any>window.DOMRectList)()).toThrow(new TypeError('Illegal constructor'));
 		});
 	});
 

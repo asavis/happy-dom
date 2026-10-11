@@ -186,6 +186,32 @@ describe('Request', () => {
 			expect(request.credentials).toBe('include');
 		});
 
+		it('Sets keepalive to "false" by default.', () => {
+			const request = new window.Request(TEST_URL);
+			expect(request.keepalive).toBe(false);
+		});
+
+		it('Supports keepalive from Request object.', () => {
+			const request = new window.Request(new window.Request(TEST_URL, { keepalive: true }));
+			expect(request.keepalive).toBe(true);
+		});
+
+		it('Supports keepalive from init object.', () => {
+			const request = new window.Request(TEST_URL, {
+				method: 'POST',
+				body: 'Hello World',
+				keepalive: true
+			});
+			expect(request.keepalive).toBe(true);
+		});
+
+		it('Overrides keepalive from Request object with keepalive from init object.', () => {
+			const request = new window.Request(new window.Request(TEST_URL, { keepalive: true }), {
+				keepalive: false
+			});
+			expect(request.keepalive).toBe(false);
+		});
+
 		it('Supports headers from Request object.', () => {
 			const headers = new Headers();
 
@@ -906,7 +932,8 @@ describe('Request', () => {
 				redirect: 'error',
 				referrerPolicy: 'no-referrer',
 				credentials: 'include',
-				referrer: 'https://example.com/path/'
+				referrer: 'https://example.com/path/',
+				keepalive: true
 			});
 
 			const clone = request.clone();
@@ -918,6 +945,7 @@ describe('Request', () => {
 			expect(clone.redirect).toBe('error');
 			expect(clone.referrerPolicy).toBe('no-referrer');
 			expect(clone.credentials).toBe('include');
+			expect(clone.keepalive).toBe(true);
 			expect(clone.referrer).toBe('https://example.com/path/');
 			expect(await clone.text()).toBe('Hello world');
 		});

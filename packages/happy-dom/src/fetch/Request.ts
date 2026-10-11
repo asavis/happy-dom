@@ -43,6 +43,7 @@ export default class Request implements Request {
 	public [PropertySymbol.signal]: AbortSignal;
 	public [PropertySymbol.bodyUsed]: boolean = false;
 	public [PropertySymbol.credentials]: TRequestCredentials;
+	public [PropertySymbol.keepalive]: boolean;
 
 	// Internal properties
 	public [PropertySymbol.aborted]: boolean = false;
@@ -109,6 +110,8 @@ export default class Request implements Request {
 		this[PropertySymbol.body] = stream;
 		this[PropertySymbol.credentials] =
 			init?.credentials || (<Request>input).credentials || 'same-origin';
+		this[PropertySymbol.keepalive] =
+			init?.keepalive !== undefined ? !!init.keepalive : !!(<Request>input).keepalive;
 		this[PropertySymbol.headers] = new this[PropertySymbol.window].Headers(
 			init?.headers || (<Request>input).headers || {}
 		);
@@ -252,6 +255,15 @@ export default class Request implements Request {
 	 */
 	public get credentials(): TRequestCredentials {
 		return this[PropertySymbol.credentials];
+	}
+
+	/**
+	 * Returns keepalive.
+	 *
+	 * @returns Keepalive.
+	 */
+	public get keepalive(): boolean {
+		return this[PropertySymbol.keepalive];
 	}
 
 	/**

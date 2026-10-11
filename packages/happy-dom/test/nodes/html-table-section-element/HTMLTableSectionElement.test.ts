@@ -1,4 +1,6 @@
 import HTMLTableSectionElement from '../../../src/nodes/html-table-section-element/HTMLTableSectionElement.js';
+import HTMLCollection from '../../../src/nodes/element/HTMLCollection.js';
+import type HTMLTableElement from '../../../src/nodes/html-table-element/HTMLTableElement.js';
 import Window from '../../../src/window/Window.js';
 import type Document from '../../../src/nodes/document/Document.js';
 import { beforeEach, describe, it, expect } from 'vitest';
@@ -17,6 +19,47 @@ describe('HTMLTableSectionElement', () => {
 	describe('constructor()', () => {
 		it('Should be an instanceof HTMLTableSectionElement', () => {
 			expect(element instanceof HTMLTableSectionElement).toBe(true);
+		});
+	});
+
+	describe('get rows()', () => {
+		it('Returns an HTMLCollection of the <tr> children.', () => {
+			expect(element.rows).toBeInstanceOf(HTMLCollection);
+			expect(element.rows.length).toBe(0);
+			element.innerHTML = '<tr><td>1</td></tr><tr><td>2</td></tr>';
+			expect(element.rows.length).toBe(2);
+			expect(element.rows[0]).toBe(element.children[0]);
+			expect(element.rows[1]).toBe(element.children[1]);
+		});
+
+		it('Returns the same live collection that reflects changes to the children.', () => {
+			const rows = element.rows;
+			expect(element.rows).toBe(rows);
+
+			const row = element.insertRow();
+			expect(rows.length).toBe(1);
+			expect(rows[0]).toBe(row);
+
+			row.remove();
+			expect(rows.length).toBe(0);
+		});
+
+		it('Only includes <tr> elements that are children of the section.', () => {
+			element.innerHTML =
+				'<tr><td><table><tbody><tr><td>nested</td></tr></tbody></table></td></tr><tr><td>2</td></tr>';
+			expect(element.rows.length).toBe(2);
+			expect(element.rows[0]).toBe(element.children[0]);
+			expect(element.rows[1]).toBe(element.children[1]);
+		});
+
+		it('Is supported by <thead>, <tbody> and <tfoot> elements.', () => {
+			const table = <HTMLTableElement>document.createElement('table');
+			table.innerHTML =
+				'<thead><tr><th>a</th></tr></thead><tbody><tr><td>1</td></tr><tr><td>2</td></tr></tbody><tfoot><tr><td>3</td></tr><tr><td>4</td></tr><tr><td>5</td></tr></tfoot>';
+			expect(table.tHead!.rows.length).toBe(1);
+			expect(table.tBodies[0].rows.length).toBe(2);
+			expect(table.tFoot!.rows.length).toBe(3);
+			expect(table.tBodies[0].rows[1].textContent).toBe('2');
 		});
 	});
 

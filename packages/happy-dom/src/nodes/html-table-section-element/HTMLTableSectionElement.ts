@@ -1,6 +1,7 @@
 import QuerySelector from '../../query-selector/QuerySelector.js';
 import * as PropertySymbol from '../../PropertySymbol.js';
 import HTMLElement from '../html-element/HTMLElement.js';
+import HTMLCollection from '../element/HTMLCollection.js';
 import type HTMLTableRowElement from '../html-table-row-element/HTMLTableRowElement.js';
 import DOMExceptionNameEnum from '../../exception/DOMExceptionNameEnum.js';
 /**
@@ -9,6 +10,29 @@ import DOMExceptionNameEnum from '../../exception/DOMExceptionNameEnum.js';
  * @see https://developer.mozilla.org/en-US/docs/Web/API/HTMLTableSectionElement
  */
 export default class HTMLTableSectionElement extends HTMLElement {
+	public [PropertySymbol.rows]: HTMLCollection<HTMLTableRowElement> | null = null;
+
+	/**
+	 * Returns rows.
+	 *
+	 * @see https://html.spec.whatwg.org/multipage/tables.html#dom-tbody-rows
+	 * @returns Rows.
+	 */
+	public get rows(): HTMLCollection<HTMLTableRowElement> {
+		if (!this[PropertySymbol.rows]) {
+			this[PropertySymbol.rows] = new HTMLCollection<HTMLTableRowElement>(
+				PropertySymbol.illegalConstructor,
+				() =>
+					<HTMLTableRowElement[]>(
+						this[PropertySymbol.elementArray].filter(
+							(element) => element[PropertySymbol.tagName] === 'TR'
+						)
+					)
+			);
+		}
+		return this[PropertySymbol.rows];
+	}
+
 	/**
 	 * Returns an HTMLTableRowElement representing a new row of the table. It inserts it in the rows collection immediately before the <tr> element at the given index position. If the index is -1, the new row is appended to the collection. If the index is smaller than -1 or greater than the number of rows in the collection, a DOMException with the value IndexSizeError is raised.
 	 *

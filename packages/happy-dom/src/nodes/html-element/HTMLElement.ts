@@ -26,10 +26,6 @@ export default class HTMLElement extends Element {
 	public declare [PropertySymbol.offsetWidth]: number;
 	public declare [PropertySymbol.offsetLeft]: number;
 	public declare [PropertySymbol.offsetTop]: number;
-	public declare [PropertySymbol.clientHeight]: number;
-	public declare [PropertySymbol.clientWidth]: number;
-	public declare [PropertySymbol.clientLeft]: number;
-	public declare [PropertySymbol.clientTop]: number;
 	public declare [PropertySymbol.style]: CSSStyleDeclaration | null;
 	public declare [PropertySymbol.dataset]: DOMStringMap | null;
 	public declare [PropertySymbol.customElementDefineCallback]: (() => void) | null;
@@ -56,10 +52,6 @@ export default class HTMLElement extends Element {
 		this[PropertySymbol.offsetWidth] = 0;
 		this[PropertySymbol.offsetLeft] = 0;
 		this[PropertySymbol.offsetTop] = 0;
-		this[PropertySymbol.clientHeight] = 0;
-		this[PropertySymbol.clientWidth] = 0;
-		this[PropertySymbol.clientLeft] = 0;
-		this[PropertySymbol.clientTop] = 0;
 		this[PropertySymbol.style] = null;
 		this[PropertySymbol.dataset] = null;
 		this[PropertySymbol.customElementDefineCallback] = null;
@@ -614,42 +606,6 @@ export default class HTMLElement extends Element {
 	 */
 	public get offsetTop(): number {
 		return this[PropertySymbol.offsetTop];
-	}
-
-	/**
-	 * Returns client height.
-	 *
-	 * @returns Client height.
-	 */
-	public get clientHeight(): number {
-		return this[PropertySymbol.clientHeight];
-	}
-
-	/**
-	 * Returns client width.
-	 *
-	 * @returns Client width.
-	 */
-	public get clientWidth(): number {
-		return this[PropertySymbol.clientWidth];
-	}
-
-	/**
-	 * Returns client left.
-	 *
-	 * @returns Client left.
-	 */
-	public get clientLeft(): number {
-		return this[PropertySymbol.clientLeft];
-	}
-
-	/**
-	 * Returns client top.
-	 *
-	 * @returns Client top.
-	 */
-	public get clientTop(): number {
-		return this[PropertySymbol.clientTop];
 	}
 
 	/**
